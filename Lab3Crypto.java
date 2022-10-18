@@ -1,3 +1,5 @@
+import java.util.stream.Stream;
+
 class main {
 
     public enum CipherMode {
@@ -8,34 +10,104 @@ class main {
         CTR
     };
 
-    public class OFBGenerator {
-        long lastBlock;
+    public interface BlockMode {
+        public long encryptBlock(long input);
+    }
+
+    public interface EncryptionMethod{
+        // can be tweaked to set up an inverse "decrypt" function on the same interface,
+        // once we're ready for that
+        public long encrypt(long input, long key);
+    } 
+
+    public class ECBMode implements BlockMode {
         long key;
-        
-        public OFBGenerator (long initializationVector, long key){
-            lastBlock = initializationVector;
+        EncryptionMethod em;
+
+        public ECBMode(long key, EncryptionMethod em){
             this.key = key;
+            this.em = em;
         }
 
-        public long nextBlock(){
-            lastBlock = encrypt(lastBlock, key);
-            return lastBlock;
+        public long encryptBlock(long input){
+            return em.encrypt(input, key);
         }
     }
 
-    public class CTRGenerator {
+    public class CBCMode implements BlockMode {
+        long previousResult;
+        long key;
+        EncryptionMethod em;
+
+        public CBCMode(long initializationVector, long key, EncryptionMethod em){
+            previousResult = initializationVector;
+            this.key = key;
+            this.em = em;
+        }
+
+        public long encryptBlock(long input){
+            previousResult = em.encrypt(input ^ previousResult, key);
+            return previousResult;
+        }
+    }
+
+    public class CFBMode implements BlockMode {
+        long previousResult;
+        long key;
+        EncryptionMethod em;
+
+        public CFBMode(long initializationVector, long key, EncryptionMethod em){
+            previousResult = initializationVector;
+            this.key = key;
+            this.em = em;
+        }
+
+        public long encryptBlock(long input){
+            previousResult = input ^ encrypt(previousResult, key);
+            return previousResult;
+        }
+    }
+
+    public class OFBMode implements BlockMode {
+        long lastBlock;
+        long key;
+        EncryptionMethod em;
+        
+        public OFBMode (long initializationVector, long key, EncryptionMethod em){
+            lastBlock = initializationVector;
+            this.key = key;
+            this.em = em;
+        }
+
+        public long nextBlock(){
+            lastBlock = em.encrypt(lastBlock, key);
+            return lastBlock;
+        }
+
+        public long encryptBlock(long input){
+            return nextBlock() ^ input;
+        }
+    }
+
+    public class CTRMode implements BlockMode {
         long counter;
         long key;
+        EncryptionMethod em;
 
-        public CTRGenerator(long nonce, long key){
+        public CTRMode(long nonce, long key, EncryptionMethod em){
             counter = nonce * 65336; //65336 == 2^16, to add zeroes in binary
             this.key = key;
+            this.em = em;
         }
 
         public long nextBlock() {
-            output = encrypt(counter, key);
+            long output = em.encrypt(counter, key);
             counter++;
             return output;
+        }
+
+        public long encryptBlock(long input){
+            return nextBlock() ^ input;
         }
     }
 
@@ -81,6 +153,7 @@ class main {
             .reduce("", (a,b) -> a.concat(b)), 2);
     }
 
+    /*
     public long electronicCodeBookEncryption(long plaintext, long previousResult, long key){
         return encrypt(plaintext, key);
     }
@@ -100,6 +173,7 @@ class main {
     public long counterMode(long plaintext, CTRGenerator gen){
         return plaintext ^ gen.nextBlock();
     }
+    */
 
 
 
