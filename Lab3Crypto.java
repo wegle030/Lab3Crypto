@@ -1,3 +1,7 @@
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 class main {
@@ -48,10 +52,6 @@ class main {
             return Long.valueOf(keyString, 2);
         }
     }
-
-
-
-    
 
     public interface BlockMode {
         public long encryptBlock(long input);
@@ -167,11 +167,20 @@ class main {
     */
 
     private long parseASCII(String input){
-        return Long.valueOf(Stream.of(input.toCharArray())
-            .flatMap(c -> Stream.of((int) c))
-            .flatMap(c -> Stream.of(Number.toBinaryString(c)))
-            .flatMap(c -> Stream.of("0".repeat(7 - c.length()).concat(c)))
-            .reduce("", (a,b) -> a.concat(b)), 2);
+        return Long.valueOf(
+            Stream.of(input)
+            .map(s -> s.getBytes())
+            .flatMapToInt(arg -> {
+                IntStream.Builder builder = IntStream.builder();
+                for (byte b: arg){
+                    builder.accept(b);
+                }
+                return builder.build();
+            })
+            .mapToObj(c -> Integer.toBinaryString(c))
+            .map(c -> "0".repeat(7 - c.length()).concat(c))
+            .reduce("", (a,b) -> a.concat(b)),
+        2);
     }
 
     /*
