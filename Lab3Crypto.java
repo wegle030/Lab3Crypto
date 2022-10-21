@@ -10,15 +10,54 @@ class main {
         CTR
     };
 
-    public interface BlockMode {
-        public long encryptBlock(long input);
-    }
-
     public interface EncryptionMethod{
         // can be tweaked to set up an inverse "decrypt" function on the same interface,
         // once we're ready for that
         public long encrypt(long input, long key);
-    } 
+
+        public long decrypt(long input, long key);
+    }
+
+    public class BitRotationMethod implements EncryptionMethod{
+
+        public BitRotationMethod(){}
+        
+        public long encrypt(long plaintext, long key){
+            long convertedInput = rotateBits(plaintext);
+            
+            return convertedInput ^ key;
+        }
+
+        public long decrypt(long cyphertext, long key){
+            long convertedInput = rotateLeft(cyphertext);
+
+            return convertedInput ^ key;
+        }
+
+        private long rotateBits(long input){
+            String keyString = Long.toBinaryString(input);
+            keyString = "0".repeat(35 - keyString.length()).concat(keyString);
+            keyString = keyString.substring(32).concat(keyString.substring(0, 32));
+            return Long.valueOf(keyString, 2);
+        }
+
+        private long rotateLeft(long input){
+            String keyString = Long.toBinaryString(input);
+            keyString = "0".repeat(35 - keyString.length()).concat(keyString);
+            keyString = keyString.substring(3, 35).concat(keyString.substring(0, 3));
+            return Long.valueOf(keyString, 2);
+        }
+    }
+
+
+
+    
+
+    public interface BlockMode {
+        public long encryptBlock(long input);
+        
+        // Add in a decryptBlock function as well
+    }
 
     public class ECBMode implements BlockMode {
         long key;
@@ -63,7 +102,7 @@ class main {
         }
 
         public long encryptBlock(long input){
-            previousResult = input ^ encrypt(previousResult, key);
+            previousResult = input ^ em.encrypt(previousResult, key);
             return previousResult;
         }
     }
@@ -115,6 +154,7 @@ class main {
         
     }
 
+    /*
     public long encrypt(String cyphertext, String key){
         return encrypt(cyphertext, parseASCII(key));
     }
@@ -124,26 +164,7 @@ class main {
         
         return convertedInput ^ key;
     }
-
-    public long encrypt(long cyphertext, long key){
-        long convertedInput = rotateBits(cyphertext);
-        
-        return convertedInput ^ key;
-    }
-
-    public long rotateLeft(long key){
-        String keyString = Long.toBinaryString(key);
-        keyString = "0".repeat(35 - keyString.length()).concat(keyString);
-        keyString = keyString.substring(3, 35).concat(keyString.substring(0, 3));
-        return Long.valueOf(keyString, 2);
-    }
-
-    private long rotateBits(long key){
-        String keyString = Long.toBinaryString(key);
-        keyString = "0".repeat(35 - keyString.length()).concat(keyString);
-        keyString = keyString.substring(32).concat(keyString.substring(0, 32));
-        return Long.valueOf(keyString, 2);
-    }
+    */
 
     private long parseASCII(String input){
         return Long.valueOf(Stream.of(input.toCharArray())
